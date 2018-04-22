@@ -1,0 +1,12 @@
+{
+    "led_ticker_api_url":"https://dznattjsdb.execute-api.us-east-1.amazonaws.com/api/",
+    "api_key":"aCk0zUSutk223LMPkxekg6MS0Bxj6LDHz2hCT9Hg",
+    "ticker_display_font":"8x13.bdf",
+    "ticker_display_color":[100, 255, 0],
+    "ticker_display_chain_length":2,
+    "ticker_value_increasing":8594,
+    "ticker_value_decreasing":8595,
+    "ticker_value_no_change":8596,
+    "ticker_y_axis":20,
+    "ticker_sleep_time":0.05
+}
