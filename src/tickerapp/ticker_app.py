@@ -18,7 +18,8 @@ APP_DIR_PATH = "/".join(pathsplit)
 DEFAULT_CONFIG_PATH = APP_DIR_PATH + "/config/settings.json"
 
 _log = logging.getLogger(__name__)
-_RESPONSE_BUF = []
+_RESPONSE_BUF = {}
+
 
 def logger_config():
     hdlr = logging.FileHandler('/var/log/ticker_logs.log')
@@ -73,7 +74,9 @@ class Ticker:
                 for i in response:
                     payload = i.get('payload')
                     if i.get('display_type') == 'delta':
-                        _display_message_delta(self, payload, offscreen_canvas,
+                        origin = i.get('origin_system')
+                        _display_message_delta(self, payload, origin,
+                                               offscreen_canvas,
                                                font, text_color, text_y_axis,
                                                ticker_sleep)
                     else:
@@ -84,13 +87,22 @@ class Ticker:
                 pass
 
 
-def _display_message_delta(self, payload, offscreen_canvas, font, text_color,
-                           text_y_axis, ticker_sleep):
+def _display_message_delta(self, payload, origin, offscreen_canvas, font,
+                           text_color, text_y_axis, ticker_sleep):
         value = payload.get('value')
-        arrow_clr = payload.get('arrow_color')
+        prev_value = _RESPONSE_BUF.get(origin)
+        if prev_value is None:
+            _RESPONSE_BUF[origin] = value
+            prev_value = value
+        arrow_goal = payload.get('arrow_goal')
+        change = _get_change(prev_value, value)
+        change_color = _get_symbol_color(arrow_goal, change)
+        text_color = change_color
+        symbol = _get_change_symbol(change)
         pos = offscreen_canvas.width
         txt_len = 1
-        display_text = payload.get('text') + str(value) + str(arrow_clr)
+        display_text = (payload.get('text') + " "
+                        + str(value) + " " + str(symbol))
         _draw_text(self, offscreen_canvas, font, pos, text_y_axis, text_color,
                    display_text, ticker_sleep, txt_len)
 
@@ -123,14 +135,24 @@ def _draw_text(self, offscreen_canvas, font, pos, text_y_axis, text_color,
             self.matrix.SwapOnVSync(offscreen_canvas))
 
 
-def _get_percent_change(old, new, change):
+def _get_percent_change(old, new):
     pc = 0.0
+    change = _get_change(old, new)
     if change != 0:
         if change:
             pc = (new - old)/old * 100
         else:
             pc = (old - new)/old * 100
     return pc
+
+
+def _get_change(old, new):
+    change = 0
+    if new > old:
+        change = 1
+    elif old < new:
+        change = -1
+    return change
 
 
 def _get_change_symbol(change):
@@ -143,12 +165,18 @@ def _get_change_symbol(change):
     return chr(symbol)
 
 
-def _get_symbol_color(percent_change):
+def _get_symbol_color(goal, change):
     rgb = settings.get("ticker_display_color")
-    if percent_change:
-        rgb = [0, 0, 255]
-    elif percent_change < 0:
-        rgb = [255, 0, 0]
+    if goal == "increase":
+        if change:
+            rgb = [0, 0, 255]
+        elif change < 0:
+            rgb = [255, 0, 0]
+    elif goal == "decrease":
+        if change < 0:
+            rgb = [0, 0, 255]
+        elif change > 0:
+            rgb = [255, 0, 0]
     return rgb
 
 
